@@ -42,3 +42,33 @@ def good_noun_phrase(noun_phrase):
         if np in {'http', 'https'} or len(np) < 3:
             return False
     return True
+
+    # reshapes the tagged tweets into dictionaries that can be easily consumed by the front-end app
+def group_tweets(processed_tweets):
+    # Sort it by sentiment
+    sentiment_sorted = sorted(processed_tweets, key=lambda x: x['data']['sentiment'])
+
+    # collect tweets by noun phrases. One tweet can be present in the list of more than one noun phrase, obviously.
+    tweets_by_np = defaultdict(list)
+
+    for pt in processed_tweets:
+        for np in pt['data']['noun_phrases']:
+            tweets_by_np[np].append(pt)
+    grouped_by_np = {np.title(): tweets for np, tweets in tweets_by_np.items() if len(tweets) > 1 and good_noun_phrase(np)}
+    return sentiment_sorted, grouped_by_np
+
+# download, filter, and analyze the tweets
+def download_analyze_tweets(accounts):
+    processed_tweets = []
+    for account in accounts:
+        for tweet in get_tweets(account):
+            processed_tweet = ' '.join([i for i in tweet.split(' ') if not i.startswith('@')])
+            res = get_sentiment_and_np(processed_tweet)
+            processed_tweets.append({
+                'account': account,
+                'tweet': tweet,
+                'data': res
+            })
+
+    sentiment_sorted, grouped_by_np = group_tweets(processed_tweets)
+    return processed_tweets, sentiment_sorted, grouped_by_np
